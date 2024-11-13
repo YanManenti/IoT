@@ -14,12 +14,17 @@
 #include <ESPAsyncTCP.h>
 #endif
 #include <ESPAsyncWebServer.h>
+#include "DHT.h"
+
+#define DHTTYPE DHT11
+uint8_t DHTPin = 4; 
+DHT dht(DHTPin, DHTTYPE);
 
 AsyncWebServer server(80);
 
 // Wifi
-const char* ssid = "";
-const char* password = "";
+const char* ssid = "Yan-J5";
+const char* password = "3524172300";
 
 // HTTP params
 const char* PARAM_MESSAGE = "message";
@@ -30,9 +35,10 @@ String output26State = "off";
 String output27State = "off";
 
 // On/Off state
-boolean isOn = false;
+boolean isOn = true;
 
 // Sensor
+
 //https://randomnerdtutorials.com/esp32-dht11-dht22-temperature-humidity-sensor-arduino-ide/
 
 // Led
@@ -42,7 +48,7 @@ int ledPin = 0;
 // Temperatura
 int temperaturaDesejada = 0;
 // Ler do sensor a temperatura inicial
-int temperaturaSensor = 0;
+float temperaturaSensor = dht.readTemperature();
 
 
 void notFound(AsyncWebServerRequest *request) {
@@ -50,7 +56,7 @@ void notFound(AsyncWebServerRequest *request) {
 }
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(9600);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -75,17 +81,17 @@ void setup() {
             "</head>"
             "<body>"
               "<h1>ESP32 Web Server</h1>"
-              "<p>isOn: " + isOn + "</p>"
+              "<p>isOn: " + String(isOn? "true":"false") + "</p>"
               "<form action=\"\" method=\"post\">"
-                "<input type=\"submit\" name=\"isOn\" value="!isOn">" + isOn + "<\input>"
+                "<input type=\"submit\" name=\"isOn\" value="">" + String(isOn ? "Desligar" : "Ligar") + "<\input>"
               "</form>"
-              "<p>temperaturaSensor: " + temperaturaSensor + "</p>"
+              "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
               "<form action=\"\" method=\"post\">"
-                "<input type=\"submit\" name=\"setTemperaturaDesejada\" value="temperaturaDesejada-1">-<\input>"
+                //"<input type=\"submit\" name=\"setTemperaturaDesejada\" value="(temperaturaDesejada-1)">-<\input>"
               "</form>"
-              "<p>Temperatura:" + temperaturaDesejada + "<\p>"
+              "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
               "<form action=\"\" method=\"post\">"
-                "<input type=\"submit\" name=\"setTemperaturaDesejada\" value="temperaturaDesejada+1">+<\input>"
+                //"<input type=\"submit\" name=\"setTemperaturaDesejada\" value="(temperaturaDesejada+1)">+<\input>"
               "</form>"
             "</body>"
         "</html>");
@@ -130,7 +136,9 @@ void setup() {
 void loop() {
   if(isOn){
     //Ler temperatura do sensor
-    Serial.println("temperaturaSensor: " + temperaturaSensor);
+    delay(2000);
+    temperaturaSensor = dht.readTemperature();
+    Serial.println(temperaturaSensor);
     Serial.println("temperaturaDesejada: " + temperaturaDesejada);
     if(temperaturaDesejada>temperaturaSensor){
       digitalWrite(LED_BUILTIN, HIGH);
