@@ -29,7 +29,9 @@ const char* password = "3524172300";
 // HTTP params
 const char* PARAM_MESSAGE = "message";
 const char* PARAM_ISON = "isOn";
-const char* PARAM_SETTEMPERATURADESEJADA = "setTemperaturaDesejada";
+const char* PARAM_MAIS = "mais";
+const char* PARAM_MENOS = "menos";
+
 
 String output26State = "off";
 String output27State = "off";
@@ -48,7 +50,7 @@ int ledPin = 0;
 // Temperatura
 int temperaturaDesejada = 0;
 // Ler do sensor a temperatura inicial
-float temperaturaSensor = dht.readTemperature();
+float temperaturaSensor = 500;
 
 
 void notFound(AsyncWebServerRequest *request) {
@@ -73,6 +75,7 @@ void setup() {
           "<html>"
             "<head>"
               "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+              //"<meta http-equiv=\"refresh\" content=\"5\">" ??????????????????????????????????????
               "<link rel=\"icon\" href=\"data:,\">"
               "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}"
               ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}"
@@ -82,21 +85,24 @@ void setup() {
             "<body>"
               "<h1>ESP32 Web Server</h1>"
               "<p>isOn: " + String(isOn? "true":"false") + "</p>"
-              "<form action=\"\" method=\"post\">"
-                "<input type=\"submit\" name=\"isOn\" value="">" + String(isOn ? "Desligar" : "Ligar") + "<\input>"
+              "<form action=\"\" method=\"get\">"
+                "<input type=\"submit\" name=\"isOn\" value="+String(!isOn ? "Desligar" : "Ligar")+" />"
               "</form>"
               "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
-              "<form action=\"\" method=\"post\">"
-                //"<input type=\"submit\" name=\"setTemperaturaDesejada\" value="(temperaturaDesejada-1)">-<\input>"
+              "<form action=\"\" method=\"get\">"
+                "<input type=\"hidden\" name=\"menos\" />"
+                "<input type=\"submit\"  value=\"-\" />"
               "</form>"
               "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
-              "<form action=\"\" method=\"post\">"
-                //"<input type=\"submit\" name=\"setTemperaturaDesejada\" value="(temperaturaDesejada+1)">+<\input>"
+              "<form action=\"\" method=\"get\">"
+                "<input type=\"hidden\" name=\"mais\" />"
+                "<input type=\"submit\" value=\"+\" />"
               "</form>"
             "</body>"
         "</html>");
     });
 
+    /*
     // Send a GET request to <IP>/get?message=<message>
     server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
         String message;
@@ -107,25 +113,29 @@ void setup() {
         }
         request->send(200, "text/plain", "Hello, GET: " + message);
     });
+    */
 
     // Send a POST request to <IP>/post with a form field message set to <message>
-    server.on("/post", HTTP_POST, [](AsyncWebServerRequest *request){
-        String message = "";
+    server.on("/get", HTTP_GET, [](AsyncWebServerRequest *request){
+
+        String message = "NEW VALUE FOR ";
         String temperatura = "";
-        // if (request->hasParam(PARAM_MESSAGE, true)) {
-        //     message = request->getParam(PARAM_MESSAGE, true)->value();
-        // }
+
         if (request->hasParam(PARAM_ISON, true)) {
           isOn=!isOn;
+          message += "isOn: "+isOn;
         }
-        if (request->hasParam(PARAM_SETTEMPERATURADESEJADA, true)) {
-          temperatura = request->getParam(PARAM_SETTEMPERATURADESEJADA, true)->value();
-          temperaturaDesejada = temperatura.toInt();
+        if (request->hasParam(PARAM_MENOS, true)) {
+          temperaturaDesejada--;
+          message += "temperaturaDesejada: "+temperaturaDesejada;
         } 
-        // else {
-        //     message = "No message sent";
-        // }
-        request->send(200, "text/plain", "Hello, POST: Temperatura: " + temperatura + " isOn: " + !isOn);
+        if (request->hasParam(PARAM_MAIS, true)) {
+          temperaturaDesejada++;
+          message += "temperaturaDesejada: "+temperaturaDesejada;
+        }
+
+        request->send(200, "text/plain", "Hello, POST: "+message);
+
     });
 
     server.onNotFound(notFound);
@@ -149,3 +159,34 @@ void loop() {
     digitalWrite(LED_BUILTIN, LOW);
   }
 }
+
+/*
+//Index page HTML
+const char index_html[] PROGMEM = R"rawliteral(
+  <!DOCTYPE html>
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1">
+              <link rel="icon" href="data:,">
+              <style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}
+              .button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}
+              .button2 {background-color: #555555;}
+              </style>
+            </head>
+            <body>
+              <h1>ESP32 Web Server</h1>
+              <p>isOn: " + String(isOn? "true":"false") + "</p>
+              <form action="" method="post">
+                <input type="submit" name="isOn" value="">" + String(isOn ? "Desligar" : "Ligar") + "<\input>
+              </form>
+              <p>temperaturaSensor: " + String(temperaturaSensor) + "</p>
+              <form action="" method="post">
+                //<input type="submit" name="setTemperaturaDesejada" value="(temperaturaDesejada-1)">-<\input>
+              </form>
+              <p>Temperatura:" + String(temperaturaDesejada) + "<\p>
+              <form action="" method="post">
+                //<input type="submit" name="setTemperaturaDesejada" value="(temperaturaDesejada+1)">+<\input>
+              </form>
+            </body>
+        </html>)rawliteral";
+*/
