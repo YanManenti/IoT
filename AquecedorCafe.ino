@@ -47,10 +47,7 @@ boolean isOn = true;
 //usar um led real e nao LED_BUILTIN
 int ledPin = 0;
 
-// Temperatura
-int temperaturaDesejada = 0;
-// Ler do sensor a temperatura inicial
-float temperaturaSensor = 500;
+
 
 
 void notFound(AsyncWebServerRequest *request) {
@@ -58,7 +55,7 @@ void notFound(AsyncWebServerRequest *request) {
 }
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -85,17 +82,17 @@ void setup() {
             "<body>"
               "<h1>ESP32 Web Server</h1>"
               "<p>isOn: " + String(isOn? "true":"false") + "</p>"
-              "<form action=\"\" method=\"get\">"
-                "<input type=\"submit\" name=\"isOn\" value="+String(!isOn ? "Desligar" : "Ligar")+" />"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"submit\" name=\"isOn\" value="+String(isOn ? "Desligar" : "Ligar")+" />"
               "</form>"
               "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
-              "<form action=\"\" method=\"get\">"
-                "<input type=\"hidden\" name=\"menos\" />"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"hidden\" name=\"menos\" value=\"1\"/>"
                 "<input type=\"submit\"  value=\"-\" />"
               "</form>"
               "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
-              "<form action=\"\" method=\"get\">"
-                "<input type=\"hidden\" name=\"mais\" />"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"hidden\" name=\"mais\" value=\"1\"/>"
                 "<input type=\"submit\" value=\"+\" />"
               "</form>"
             "</body>"
@@ -134,7 +131,36 @@ void setup() {
           message += "temperaturaDesejada: "+temperaturaDesejada;
         }
 
-        request->send(200, "text/plain", "Hello, POST: "+message);
+        request->send(200, "text/html", ""
+        "<!DOCTYPE html>"
+          "<html>"
+            "<head>"
+              "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+              //"<meta http-equiv=\"refresh\" content=\"5\">" ??????????????????????????????????????
+              "<link rel=\"icon\" href=\"data:,\">"
+              "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}"
+              ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}"
+              ".button2 {background-color: #555555;}"
+              "</style>"
+            "</head>"
+            "<body>"
+              "<h1>ESP32 Web Server</h1>"
+              "<p>isOn: " + String(isOn? "true":"false") + "</p>"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"submit\" name=\"isOn\" value="+String(isOn ? "Desligar" : "Ligar")+" />"
+              "</form>"
+              "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"hidden\" name=\"menos\" value=\"1\"/>"
+                "<input type=\"submit\"  value=\"-\" />"
+              "</form>"
+              "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
+              "<form action=\"/get\" method=\"get\" >"
+                "<input type=\"hidden\" name=\"mais\" value=\"1\"/>"
+                "<input type=\"submit\" value=\"+\" />"
+              "</form>"
+            "</body>"
+        "</html>");
 
     });
 
