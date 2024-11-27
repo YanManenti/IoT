@@ -6,13 +6,9 @@
 //
 
 #include <Arduino.h>
-#ifdef ESP32
 #include <WiFi.h>
 #include <AsyncTCP.h>
-#elif defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
-#endif
+
 #include <ESPAsyncWebServer.h>
 #include "DHT.h"
 
@@ -29,8 +25,7 @@ const char* password = "3524172300";
 // HTTP params
 const char* PARAM_MESSAGE = "message";
 const char* PARAM_ISON = "isOn";
-const char* PARAM_MAIS = "mais";
-const char* PARAM_MENOS = "menos";
+const char* PARAM_TEMPERATURA = "temperatura";
 
 
 String output26State = "off";
@@ -40,12 +35,14 @@ String output27State = "off";
 boolean isOn = true;
 
 // Sensor
+float temperaturaSensor = 0;
+float temperaturaDesejada = 25.20;
 
 //https://randomnerdtutorials.com/esp32-dht11-dht22-temperature-humidity-sensor-arduino-ide/
 
 // Led
 //usar um led real e nao LED_BUILTIN
-int ledPin = 0;
+#define LED 2
 
 
 
@@ -56,6 +53,7 @@ void notFound(AsyncWebServerRequest *request) {
 
 void setup() {
     Serial.begin(115200);
+    pinMode(LED,OUTPUT);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     if (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -72,28 +70,31 @@ void setup() {
           "<html>"
             "<head>"
               "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-              //"<meta http-equiv=\"refresh\" content=\"5\">" ??????????????????????????????????????
               "<link rel=\"icon\" href=\"data:,\">"
               "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}"
               ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}"
               ".button2 {background-color: #555555;}"
+              "._frameEstado {border: none;height: 45px;width: 100px;padding-left:28px;}"
+              "._frame {border: none;height: 45px;width: 60px;padding-left:5px;}"
+              ".temperaturaInput {padding-right: 10px;}"
+              "body {display: flex; flex-direction:column;gap:10px;align-items:center;}"
               "</style>"
             "</head>"
             "<body>"
-              "<h1>ESP32 Web Server</h1>"
-              "<p>isOn: " + String(isOn? "true":"false") + "</p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"submit\" name=\"isOn\" value="+String(isOn ? "Desligar" : "Ligar")+" />"
+              "<h1>Controle Aquecedor de Cafe</h1>"
+                "<p>Estado: </p>"
+              "<iframe class=\"_frameEstado\" name=\"onoff\">"
+              "</iframe>"
+              "<form  action=\"/get\" method=\"get\" target=\"onoff\" >"
+                "<input type=\"submit\" name=\"isOn\" value=\"Ligar\\Desligar\" />"
               "</form>"
-              "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"hidden\" name=\"menos\" value=\"1\"/>"
-                "<input type=\"submit\"  value=\"-\" />"
-              "</form>"
-              "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"hidden\" name=\"mais\" value=\"1\"/>"
-                "<input type=\"submit\" value=\"+\" />"
+              //"<p>"+String(temperaturaSensor)+"</p>"
+              "<p>Temperatura Desejada:</p>"
+              "<iframe class=\"_frame\" name=\"temp\">"
+              "</iframe>"
+              "<form action=\"/get\" method=\"get\" target=\"temp\" >"
+                "<input class=\"temperaturaInput\" type=\"number\" name=\"temperatura\"/>"
+                "<input type=\"submit\" value=\"Aplicar\" />"
               "</form>"
             "</body>"
         "</html>");
@@ -115,55 +116,19 @@ void setup() {
     // Send a POST request to <IP>/post with a form field message set to <message>
     server.on("/get", HTTP_GET, [](AsyncWebServerRequest *request){
 
-        String message = "NEW VALUE FOR ";
-        String temperatura = "";
-
-        if (request->hasParam(PARAM_ISON, true)) {
+        String message = "";
+        
+        if (request->hasParam(PARAM_ISON)) {
           isOn=!isOn;
-          message += "isOn: "+isOn;
+          message += isOn ? "Ligado" : "Desligado";
         }
-        if (request->hasParam(PARAM_MENOS, true)) {
-          temperaturaDesejada--;
-          message += "temperaturaDesejada: "+temperaturaDesejada;
-        } 
-        if (request->hasParam(PARAM_MAIS, true)) {
-          temperaturaDesejada++;
-          message += "temperaturaDesejada: "+temperaturaDesejada;
+        if (request->hasParam(PARAM_TEMPERATURA)) {
+          temperaturaDesejada = request->getParam(PARAM_TEMPERATURA)->value().toInt();
+          message += String(temperaturaDesejada);
         }
 
-        request->send(200, "text/html", ""
-        "<!DOCTYPE html>"
-          "<html>"
-            "<head>"
-              "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-              //"<meta http-equiv=\"refresh\" content=\"5\">" ??????????????????????????????????????
-              "<link rel=\"icon\" href=\"data:,\">"
-              "<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}"
-              ".button { background-color: #4CAF50; border: none; color: white; padding: 16px 40px;text-decoration: none; font-size: 30px; margin: 2px; cursor: pointer;}"
-              ".button2 {background-color: #555555;}"
-              "</style>"
-            "</head>"
-            "<body>"
-              "<h1>ESP32 Web Server</h1>"
-              "<p>isOn: " + String(isOn? "true":"false") + "</p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"submit\" name=\"isOn\" value="+String(isOn ? "Desligar" : "Ligar")+" />"
-              "</form>"
-              "<p>temperaturaSensor: " + String(temperaturaSensor) + "</p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"hidden\" name=\"menos\" value=\"1\"/>"
-                "<input type=\"submit\"  value=\"-\" />"
-              "</form>"
-              "<p>Temperatura:" + String(temperaturaDesejada) + "<\p>"
-              "<form action=\"/get\" method=\"get\" >"
-                "<input type=\"hidden\" name=\"mais\" value=\"1\"/>"
-                "<input type=\"submit\" value=\"+\" />"
-              "</form>"
-            "</body>"
-        "</html>");
-
+        request->send(200, "text/plain", message);
     });
-
     server.onNotFound(notFound);
 
     server.begin();
@@ -174,15 +139,15 @@ void loop() {
     //Ler temperatura do sensor
     delay(2000);
     temperaturaSensor = dht.readTemperature();
-    Serial.println(temperaturaSensor);
-    Serial.println("temperaturaDesejada: " + temperaturaDesejada);
+    Serial.println(String(temperaturaSensor));
+    Serial.println("temperaturaDesejada: " + String(temperaturaDesejada));
     if(temperaturaDesejada>temperaturaSensor){
-      digitalWrite(LED_BUILTIN, HIGH);
+      digitalWrite(LED, HIGH);
     }else{
-      digitalWrite(LED_BUILTIN, LOW);
+      digitalWrite(LED, LOW);
     }
   }else{
-    digitalWrite(LED_BUILTIN, LOW);
+    digitalWrite(LED, LOW);
   }
 }
 
